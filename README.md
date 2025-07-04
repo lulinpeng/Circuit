@@ -21,3 +21,8 @@ python3 bristol_circuit.py
 [LowMC Circuit] https://github.com/jacob14916/GigaDORAM-USENIX23-Artifact/blob/main/circuits/LowMC_File.txt
 
 [LowMC Paper] https://eprint.iacr.org/2023/1950.pdf
+>The instantiation of LowMC
+we use has 46837 total gates, out of which 1134 are ANDs,
+stacked into 9-AND-depth circuit. By contrast, AES has a
+total of 36663 gates, out of which 6400 are ANDs, stacked
+into a 60-AND-depth-circuit.
