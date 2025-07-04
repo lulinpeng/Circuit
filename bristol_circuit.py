@@ -72,15 +72,16 @@ def bools_to_bins(bools:list):
         out += str(int(v))
     return out
 
-circuit = BristolCircuit('aes_128.txt')
-circuit.load_circuit()
+if __name__ == '__main__':
+    circuit = BristolCircuit('aes_128.txt')
+    circuit.load_circuit()
 
-circuit.brief()
+    circuit.brief()
 
-aes_key = [False] * 128 # aes key as 000...0
-aes_msg = [True] * 128  # aes msg as 111...1
-circuit_input = aes_key + aes_msg
-print(f'circuit input: {bools_to_bins(circuit_input)}')
+    aes_key = [False] * 128 # aes key as 000...0
+    aes_msg = [True] * 128  # aes msg as 111...1
+    circuit_input = aes_key + aes_msg
+    print(f'circuit input: {bools_to_bins(circuit_input)}')
 
-circuit_output = circuit.execute_circuit(circuit_input)
-print(f'circuit output: {bools_to_bins(circuit_output)}')
+    circuit_output = circuit.execute_circuit(circuit_input)
+    print(f'circuit output: {bools_to_bins(circuit_output)}')
