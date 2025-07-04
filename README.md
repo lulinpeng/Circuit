@@ -19,3 +19,5 @@ python3 bristol_circuit.py
 [Bristol Fashion] https://nigelsmart.github.io/MPC-Circuits
 
 [LowMC Circuit] https://github.com/jacob14916/GigaDORAM-USENIX23-Artifact/blob/main/circuits/LowMC_File.txt
+
+[LowMC Paper] https://eprint.iacr.org/2023/1950.pdf
