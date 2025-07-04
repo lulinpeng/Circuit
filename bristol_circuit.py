@@ -105,7 +105,7 @@ def bools_to_bins(bools:list):
     return out
 
 if __name__ == '__main__':
-    circuit = BristolCircuit('aes_128.txt')
+    circuit = BristolCircuit('circuits/aes_128.txt')
     circuit.load_circuit()
 
     circuit.brief()
@@ -118,6 +118,6 @@ if __name__ == '__main__':
     circuit_output = circuit.execute_circuit(circuit_input)
     print(f'circuit output: {bools_to_bins(circuit_output)}')
 
-    circuit = BristolCircuit('zero_equal.txt')
+    circuit = BristolCircuit('circuits/zero_equal.txt')
     circuit.load_circuit()
     circuit.draw_circuit()
