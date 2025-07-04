@@ -1,15 +1,14 @@
 class BristolCircuit: 
     ''' refer to https://nigelsmart.github.io/MPC-Circuits/ '''
-    circuit_file:str # circuit file path
-    n:int = 0 # number of total gates
-    m:int = 0 # number of total wires (including input wires)
-    niv:int = 0 # number of input variables
-    niv_wires:list = [] # array of numbers of wires of each input variables 
-    nov:int = 0 # number of output variables
-    nov_wires:list = [] # array of numbers of wires of each output variables 
-    circuit:list = [] # gates sequence
     def __init__(self, circuit_file:str):
-        self.circuit_file = circuit_file
+        self.circuit_file = circuit_file # circuit file path
+        self.n = 0 # number of total gates
+        self.m = 0 # number of total wires (including input wires)
+        self.niv = 0 # number of input variables
+        self.niv_wires = [] # array of numbers of wires of each input variables 
+        self.nov = 0 # number of output variables
+        self.nov_wires = [] # array of numbers of wires of each output variables 
+        self.circuit = [] # gates sequence
         return
     
     def load_circuit(self):
@@ -65,6 +64,39 @@ class BristolCircuit:
         circuit_output = wires[-num_of_circuit_output_wires:]
         
         return circuit_output
+        
+    def draw_circuit(self, graph_file:str=None):
+        graph = ''
+        iv_wire = 0
+        for n in self.niv_wires:
+            for j in range(n):
+                graph += f'{iv_wire} [shape=polygon, sides=4, label="IN", color="red"]\n'
+                iv_wire += 1
+
+        for line in self.circuit:
+            line = line.strip().split()
+            if len(line) == 0:
+                continue
+            if line[-1] == 'INV':
+                graph += f'{line[3]} [shape=polygon, sides=4, label="{line[-1]}", color="black"]\n'
+                graph += f'{line[2]}->{line[3]} [label = "{line[2]}"]\n'
+            elif line[-1] == 'AND' or 'XOR':
+                graph += f'{line[4]} [shape=polygon, sides=4, label="{line[-1]}", color="black"]\n'
+                graph += f'{line[2]}->{line[4]} [label = "{line[2]}"]\n'
+                graph += f'{line[3]}->{line[4]} [label = "{line[3]}"]\n'
+        out_offset = self.m - sum(self.nov_wires)
+        for n in self.nov_wires:
+            for j in range(n):
+                graph += f'out{out_offset} [shape=polygon, sides=4, label="OUT", color="blue"]\n'
+                graph += f'{out_offset} -> out{out_offset} [label="{out_offset}"]\n'
+                out_offset += 1
+        
+        graph = 'digraph G {\n' + graph + '\n}'
+
+        graph_file = 'graph.txt' if graph_file is None else graph_file
+        with open('graph.txt', 'w') as f:
+            f.write(graph)
+        return
 
 def bools_to_bins(bools:list):
     out = ''
@@ -85,3 +117,7 @@ if __name__ == '__main__':
 
     circuit_output = circuit.execute_circuit(circuit_input)
     print(f'circuit output: {bools_to_bins(circuit_output)}')
+
+    circuit = BristolCircuit('zero_equal.txt')
+    circuit.load_circuit()
+    circuit.draw_circuit()
