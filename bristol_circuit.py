@@ -9,12 +9,12 @@ class BristolCircuit:
         self.nov = 0 # number of output variables
         self.nov_wires = [] # array of numbers of wires of each output variables 
         self.circuit = [] # gates sequence
+        self.circuit_dag = None # Directed Acyclic Graph (DAG) of the circuit
         return
     
     def load_circuit(self):
         with open(self.circuit_file) as f: 
             lines = f.readlines()
-            self.circuit = lines[4:]
             self.n = eval(lines[0].split()[0])
             self.m = eval(lines[0].split()[0])
             self.niv = eval(lines[1].split()[0])
@@ -24,7 +24,33 @@ class BristolCircuit:
             self.nov = eval(lines[2].split()[0])
             for i in range(self.nov):
                 self.nov_wires.append(eval(lines[2].split()[1+i]))
+            circuit_lines = lines[4:]
+            self.circuit = [line.strip() for line in circuit_lines if line.strip() != '']
         return
+    
+    def load_circuit_as_dag(self):
+        edges = []
+        for gate in self.circuit:
+            gate = gate.split()
+            gate_type = gate[-1]
+            if gate_type == 'INV':
+                gi_node = gate[2] # gate input node
+                go_node = gate[3] # gate output node
+                edges.append((gi_node, go_node))
+            elif gate_type == 'AND' or 'XOR':
+                gi_0_node = gate[2]
+                gi_1_node = gate[3]
+                go_node = gate[4]
+                edges.append((gi_0_node, go_node))
+                edges.append((gi_1_node, go_node))
+        import networkx
+        self.circuit_dag = networkx.DiGraph()
+        self.circuit_dag.add_edges_from(edges)
+        return
+    
+    def is_directed_acyclic_graph(self):
+        import networkx
+        return networkx.is_directed_acyclic_graph(self.circuit_dag)
     
     def brief(self):
         print(f'#(total gates) = {self.n}\n#(total wires) = {self.m}')
@@ -40,24 +66,24 @@ class BristolCircuit:
         wires[:len(circuit_input)] = circuit_input
 
         # execute the circuit
-        for i in range(self.n):
-            r = self.circuit[i].split()
-            gate = r[-1]
-            if gate not in {'AND', 'XOR', 'INV'}:
-                raise 'unexpected gate appears: ' + gate
-            elif gate == 'INV':
-                in_id = eval(r[2]) # input wire id
-                out_id = eval(r[3]) # output wire id
+        for gate in self.circuit:
+            gate = gate.strip().split()
+            gate_type = gate[-1]
+            if gate_type not in {'AND', 'XOR', 'INV'}:
+                raise 'unexpected gate appears: ' + gate_type
+            elif gate_type == 'INV':
+                in_id = eval(gate[2]) # input wire id
+                out_id = eval(gate[3]) # output wire id
                 wires[out_id] = not wires[in_id] # compute
-            elif gate == 'AND':
-                in0_id = eval(r[2]) # input wire id
-                in1_id = eval(r[3]) # input wire id
-                out_id = eval(r[4]) # output wire id
+            elif gate_type == 'AND':
+                in0_id = eval(gate[2]) # input wire id
+                in1_id = eval(gate[3]) # input wire id
+                out_id = eval(gate[4]) # output wire id
                 wires[out_id] = wires[in0_id] and wires[in1_id] # compute
-            elif gate == 'XOR':
-                in0_id = eval(r[2]) # input wire id
-                in1_id = eval(r[3]) # input wire id
-                out_id = eval(r[4]) # output wire id
+            elif gate_type == 'XOR':
+                in0_id = eval(gate[2]) # input wire id
+                in1_id = eval(gate[3]) # input wire id
+                out_id = eval(gate[4]) # output wire id
                 wires[out_id] = wires[in0_id] ^ wires[in1_id] # compute
 
         num_of_circuit_output_wires = sum(self.nov_wires)
@@ -67,29 +93,35 @@ class BristolCircuit:
         
     def draw_circuit(self, graph_file:str=None):
         graph = ''
-        iv_wire = 0
+        iv_node = 0 # input variable node
         for n in self.niv_wires:
             for j in range(n):
-                graph += f'{iv_wire} [shape=polygon, sides=4, label="IN", color="red"]\n'
-                iv_wire += 1
+                graph += f'{iv_node} [shape=polygon, sides=4, label="IN", color="red"]\n'
+                iv_node += 1
 
-        for line in self.circuit:
-            line = line.strip().split()
-            if len(line) == 0:
-                continue
-            if line[-1] == 'INV':
-                graph += f'{line[3]} [shape=polygon, sides=4, label="{line[-1]}", color="black"]\n'
-                graph += f'{line[2]}->{line[3]} [label = "{line[2]}"]\n'
-            elif line[-1] == 'AND' or 'XOR':
-                graph += f'{line[4]} [shape=polygon, sides=4, label="{line[-1]}", color="black"]\n'
-                graph += f'{line[2]}->{line[4]} [label = "{line[2]}"]\n'
-                graph += f'{line[3]}->{line[4]} [label = "{line[3]}"]\n'
-        out_offset = self.m - sum(self.nov_wires)
+        for gate in self.circuit:
+            gate = gate.strip().split()
+            gate_type = gate[-1]
+            if gate_type == 'INV':
+                gi_node = gate[2] # gate input node
+                go_node = gate[3] # gate output node
+                graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
+                graph += f'{gi_node}->{go_node} [label = "{gi_node}"]\n'
+            elif gate_type == 'AND' or 'XOR':
+                gi_0_node = gate[2]
+                gi_1_node = gate[3]
+                go_node = gate[4]
+                graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
+                graph += f'{gi_0_node}->{go_node} [label = "{gi_0_node}"]\n'
+                graph += f'{gi_1_node}->{go_node} [label = "{gi_1_node}"]\n'
+        
+        ov_node = self.m # output variable node
+        offset = sum(self.nov_wires)
         for n in self.nov_wires:
             for j in range(n):
-                graph += f'out{out_offset} [shape=polygon, sides=4, label="OUT", color="blue"]\n'
-                graph += f'{out_offset} -> out{out_offset} [label="{out_offset}"]\n'
-                out_offset += 1
+                graph += f'{ov_node} [shape=polygon, sides=4, label="OUT", color="blue"]\n'
+                graph += f'{ov_node - offset} -> {ov_node} [label="{ov_node - offset}"]\n'
+                ov_node += 1
         
         graph = 'digraph G {\n' + graph + '\n}'
 
@@ -121,3 +153,5 @@ if __name__ == '__main__':
     circuit = BristolCircuit('circuits/zero_equal.txt')
     circuit.load_circuit()
     circuit.draw_circuit()
+    circuit.load_circuit_as_dag()
+    print(f'Is the circuit a directed acyclic graph (DAG) ? {circuit.is_directed_acyclic_graph()}')
