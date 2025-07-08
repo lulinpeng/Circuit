@@ -10,6 +10,8 @@ class BristolCircuit:
         self.nov_wires = [] # array of numbers of wires of each output variables 
         self.circuit = [] # gates sequence
         self.circuit_dag = None # Directed Acyclic Graph (DAG) of the circuit
+        self.two_fan_in_gate = {'AND', 'XOR'}
+        self.one_fan_in_gate = {'INV'}
         return
     
     def load_circuit(self):
@@ -33,16 +35,18 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.split()
             gate_type = gate[-1]
-            if gate_type == 'INV':
+            if gate_type in self.one_fan_in_gate:
                 gi_node = gate[2] # gate input node
                 go_node = gate[3] # gate output node
                 edges.append((gi_node, go_node))
-            elif gate_type == 'AND' or 'XOR':
+            elif gate_type in self.two_fan_in_gate:
                 gi_0_node = gate[2]
                 gi_1_node = gate[3]
                 go_node = gate[4]
                 edges.append((gi_0_node, go_node))
                 edges.append((gi_1_node, go_node))
+            else:
+                raise 'unexpected gate appears: ' + gate_type
         import networkx
         self.circuit_dag = networkx.DiGraph()
         self.circuit_dag.add_edges_from(edges)
@@ -67,30 +71,54 @@ class BristolCircuit:
 
         # execute the circuit
         for gate in self.circuit:
-            gate = gate.strip().split()
+            gate = gate.split()
             gate_type = gate[-1]
-            if gate_type not in {'AND', 'XOR', 'INV'}:
-                raise 'unexpected gate appears: ' + gate_type
-            elif gate_type == 'INV':
+            if gate_type in self.one_fan_in_gate:
                 in_id = eval(gate[2]) # input wire id
                 out_id = eval(gate[3]) # output wire id
-                wires[out_id] = not wires[in_id] # compute
-            elif gate_type == 'AND':
+                if gate_type == 'INV':
+                    wires[out_id] = not wires[in_id] # compute
+                else:
+                    raise 'unexpected gate appears: ' + gate_type
+            elif gate_type in self.two_fan_in_gate:
                 in0_id = eval(gate[2]) # input wire id
                 in1_id = eval(gate[3]) # input wire id
                 out_id = eval(gate[4]) # output wire id
-                wires[out_id] = wires[in0_id] and wires[in1_id] # compute
-            elif gate_type == 'XOR':
-                in0_id = eval(gate[2]) # input wire id
-                in1_id = eval(gate[3]) # input wire id
-                out_id = eval(gate[4]) # output wire id
-                wires[out_id] = wires[in0_id] ^ wires[in1_id] # compute
+                if gate_type == 'AND':
+                    wires[out_id] = wires[in0_id] and wires[in1_id] # compute
+                elif gate_type == 'XOR':
+                    wires[out_id] = wires[in0_id] ^ wires[in1_id] # compute
+                else:
+                    raise 'unexpected gate appears: ' + gate_type
+            else:
+                raise 'unexpected gate appears: ' + gate_type
 
         num_of_circuit_output_wires = sum(self.nov_wires)
         circuit_output = wires[-num_of_circuit_output_wires:]
         
         return circuit_output
-        
+    
+    # circuit gate depth
+    def depth(self, specific_gate:str=None):
+        depths = [0] * self.m
+        for gate in self.circuit:
+            gate = gate.split()
+            gate_type = gate[-1]
+            if gate_type in self.one_fan_in_gate:
+                in_id = eval(gate[2]) # input wire id
+                out_id = eval(gate[3]) # output wire id
+                depths[out_id] = depths[in_id]
+                if specific_gate == None or specific_gate == gate_type:
+                    depths[out_id] += 1                 
+            elif gate_type in self.two_fan_in_gate:
+                in0_id = eval(gate[2]) # input wire id
+                in1_id = eval(gate[3]) # input wire id
+                out_id = eval(gate[4]) # output wire id
+                depths[out_id] = max(depths[in0_id], depths[in1_id])
+                if specific_gate == None or specific_gate == gate_type:
+                    depths[out_id] += 1
+        return max(depths)
+    
     def draw_circuit(self, graph_file:str=None):
         graph = ''
         iv_node = 0 # input variable node
@@ -102,18 +130,20 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.strip().split()
             gate_type = gate[-1]
-            if gate_type == 'INV':
+            if gate_type in self.one_fan_in_gate:
                 gi_node = gate[2] # gate input node
                 go_node = gate[3] # gate output node
                 graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
                 graph += f'{gi_node}->{go_node} [label = "{gi_node}"]\n'
-            elif gate_type == 'AND' or 'XOR':
+            elif gate_type in self.two_fan_in_gate:
                 gi_0_node = gate[2]
                 gi_1_node = gate[3]
                 go_node = gate[4]
                 graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
                 graph += f'{gi_0_node}->{go_node} [label = "{gi_0_node}"]\n'
                 graph += f'{gi_1_node}->{go_node} [label = "{gi_1_node}"]\n'
+            else:
+                raise 'unexpected gate appears: ' + gate_type
         
         ov_node = self.m # output variable node
         offset = sum(self.nov_wires)
@@ -137,7 +167,10 @@ def bools_to_bins(bools:list):
     return out
 
 if __name__ == '__main__':
-    circuit = BristolCircuit('circuits/aes_128.txt')
+    circuit_file = 'circuits/adder64.txt'
+    print(f'circuit file: {circuit_file}')
+    
+    circuit = BristolCircuit(circuit_file)
     circuit.load_circuit()
 
     circuit.brief()
@@ -150,8 +183,20 @@ if __name__ == '__main__':
     circuit_output = circuit.execute_circuit(circuit_input)
     print(f'circuit output: {bools_to_bins(circuit_output)}')
 
-    circuit = BristolCircuit('circuits/zero_equal.txt')
+    circuit = BristolCircuit(circuit_file)
     circuit.load_circuit()
     circuit.draw_circuit()
     circuit.load_circuit_as_dag()
     print(f'Is the circuit a directed acyclic graph (DAG) ? {circuit.is_directed_acyclic_graph()}')
+    
+    depth = circuit.depth()
+    print(f'circuit depth = {depth}')
+    
+    and_depth = circuit.depth('AND')
+    print(f'circuit logic AND gate depth = {and_depth}')
+    
+    xor_depth = circuit.depth('XOR')
+    print(f'circuit logic XOR gate depth = {xor_depth}')
+    
+    inv_depth = circuit.depth('INV')
+    print(f'circuit logic INV gate depth = {inv_depth}')
