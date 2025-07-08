@@ -380,7 +380,7 @@ digraph G {
 190 [shape=polygon, sides=4, label="AND", color="black"]
 189->190 [label = "189"]
 188->190 [label = "188"]
-out190 [shape=polygon, sides=4, label="OUT", color="blue"]
-190 -> out190 [label="190"]
+191 [shape=polygon, sides=4, label="OUT", color="blue"]
+190 -> 191 [label="190"]
 
 }

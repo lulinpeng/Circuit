@@ -1,7 +1,9 @@
 class BristolCircuit: 
     ''' refer to https://nigelsmart.github.io/MPC-Circuits/ '''
-    def __init__(self, circuit_file:str):
+    def __init__(self, circuit_file:str, circuit_name:str=None):
+        print(f'circuit_file = {circuit_file}')
         self.circuit_file = circuit_file # circuit file path
+        self.circuit_name = circuit_name # circuit name
         self.n = 0 # number of total gates
         self.m = 0 # number of total wires (including input wires)
         self.niv = 0 # number of input variables
@@ -12,6 +14,7 @@ class BristolCircuit:
         self.circuit_dag = None # Directed Acyclic Graph (DAG) of the circuit
         self.two_fan_in_gate = {'AND', 'XOR'}
         self.one_fan_in_gate = {'INV'}
+        
         return
     
     def load_circuit(self):
@@ -60,6 +63,14 @@ class BristolCircuit:
         print(f'#(total gates) = {self.n}\n#(total wires) = {self.m}')
         print(f'#(input variables) = {self.niv}, bit length of each vairable {self.niv_wires}')
         print(f'#(output variables) = {self.nov}, bit length of each variable {self.nov_wires}')
+        print(f'circuit depth = {self.depth()}')
+        and_depth = self.depth('AND')
+        print(f'circuit logic AND gate depth = {and_depth}')
+        xor_depth = self.depth('XOR')
+        print(f'circuit logic XOR gate depth = {xor_depth}')
+        inv_depth = self.depth('INV')
+        print(f'circuit logic INV gate depth = {inv_depth}')
+        print()
         return
     
     def execute_circuit(self, circuit_input:list):
@@ -156,6 +167,7 @@ class BristolCircuit:
         graph = 'digraph G {\n' + graph + '\n}'
 
         graph_file = 'graph.txt' if graph_file is None else graph_file
+        graph_file = f'graph_{self.circuit_name}.txt' if graph_file == 'graph.txt' else graph_file
         with open('graph.txt', 'w') as f:
             f.write(graph)
         return
@@ -167,36 +179,24 @@ def bools_to_bins(bools:list):
     return out
 
 if __name__ == '__main__':
-    circuit_file = 'circuits/adder64.txt'
-    print(f'circuit file: {circuit_file}')
-    
+    # aes-128 circuit
+    circuit_file = 'circuits/aes_128.txt'
     circuit = BristolCircuit(circuit_file)
     circuit.load_circuit()
-
     circuit.brief()
 
     aes_key = [False] * 128 # aes key as 000...0
     aes_msg = [True] * 128  # aes msg as 111...1
     circuit_input = aes_key + aes_msg
     print(f'circuit input: {bools_to_bins(circuit_input)}')
-
     circuit_output = circuit.execute_circuit(circuit_input)
-    print(f'circuit output: {bools_to_bins(circuit_output)}')
+    print(f'circuit output: {bools_to_bins(circuit_output)}\n')
 
-    circuit = BristolCircuit(circuit_file)
+    # zero equal circuit
+    circuit_file = 'circuits/zero_equal.txt'
+    circuit = BristolCircuit(circuit_file, circuit_name='zero_equal')
     circuit.load_circuit()
+    circuit.brief()
     circuit.draw_circuit()
     circuit.load_circuit_as_dag()
     print(f'Is the circuit a directed acyclic graph (DAG) ? {circuit.is_directed_acyclic_graph()}')
-    
-    depth = circuit.depth()
-    print(f'circuit depth = {depth}')
-    
-    and_depth = circuit.depth('AND')
-    print(f'circuit logic AND gate depth = {and_depth}')
-    
-    xor_depth = circuit.depth('XOR')
-    print(f'circuit logic XOR gate depth = {xor_depth}')
-    
-    inv_depth = circuit.depth('INV')
-    print(f'circuit logic INV gate depth = {inv_depth}')

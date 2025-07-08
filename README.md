@@ -7,17 +7,48 @@ python3 bristol_circuit.py
 ```
 ## Output
 >```
-> #(total gates) = 36663
-> #(total wires) = 36919
-> #(input variables) = 2, bit length of each vairable [128, 128]
-> #(output variables) = 1, bit length of each variable [128]
-> circuit input: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
-> circuit output: 01110010011001101011000101111100010010111110001011001110010111110101000001011010101000010101011110010011001100011101101011111100
+>circuit_file = circuits/aes_128.txt
+>#(total gates) = 36663
+>#(total wires) = 36919
+>#(input variables) = 2, bit length of each vairable [128, 128]
+>#(output variables) = 1, bit length of each variable [128]
+>circuit depth = 308
+>circuit logic AND gate depth = 60
+>circuit logic XOR gate depth = 231
+>circuit logic INV gate depth = 29
+>
+>circuit input: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+>circuit output: 01110010011001101011000101111100010010111110001011001110010111110101000001011010101000010101011110010011001100011101101011111100
+>
+>circuit_file = circuits/zero_equal.txt
+>#(total gates) = 127
+>#(total wires) = 191
+>#(input variables) = 1, bit length of each vairable [64]
+>#(output variables) = 1, bit length of each variable [1]
+>circuit depth = 7
+>circuit logic AND gate depth = 6
+>circuit logic XOR gate depth = 0
+>circuit logic INV gate depth = 1
+>
 >Is the circuit a directed acyclic graph (DAG) ? True
 >```
 
 # Draw
 Copy the content from the generated 'graph.txt' file and paste it into the website at https://dreampuf.github.io/GraphvizOnline.
+
+# Circuit Depth
+Here is the method for calculating the depth of the logic gates in Bristol Fashion circuits. Notably, the method supports **depth computation for specified logic gates** within the circuit.
+
+For general gates, 
+<div align="center">
+  <img src="pictures/circuit_depth.png" width=250>
+</div>
+
+
+For AND gates,
+<div align="center">
+  <img src="pictures/circuit_AND_depth.png" width=350>
+</div>
 
 # Reference
 
