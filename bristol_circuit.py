@@ -267,5 +267,43 @@ class BristolCircuit:
         offset = sum(self.nov_wires)
         for n in self.nov_wires:
             for j in range(n):
-                graph += f'{ov_node} [shape=polygon, sides=4, lad(ɥСɍեЁ퉽}ѽ}̡ɍե}Хq((ɼՅɍե(ɍե}􀝍ɍե̽ɽ}ՅМ(ɍեЀ	ɥѽ
-ɍեСɍե}ɍե}ɽ}Յ(ɍեй}ɍեР(ɍեйɥ(ɍեйɅ}ɍեР(ɍեй}ɍե}}(ɥС%́ѡɍեЁɕѕ危Ʌ퍥ɍեй}ɕѕ}危}Ʌ
+                graph += f'{ov_node} [shape=polygon, sides=4, label="OUT", color="blue"]\n'
+                graph += f'{ov_node - offset} -> {ov_node} [label="{ov_node - offset}"]\n'
+                ov_node += 1
+        
+        graph = 'digraph G {\n' + graph + '\n}'
+
+        graph_file = 'graph.txt' if graph_file is None else graph_file
+        graph_file = f'graph_{self.circuit_name}.txt' if graph_file == 'graph.txt' else graph_file
+        with open('graph.txt', 'w') as f:
+            f.write(graph)
+        return
+
+def bools_to_bins(bools:list):
+    out = ''
+    for v in bools:
+        out += str(int(v))
+    return out
+
+if __name__ == '__main__':
+    # aes-128 circuit
+    circuit_file = 'circuits/aes_128.txt'
+    circuit = BristolCircuit(circuit_file)
+    circuit.load_circuit()
+    circuit.brief()
+
+    aes_key = [False] * 128 # aes key as 000...0
+    aes_msg = [True] * 128  # aes msg as 111...1
+    circuit_input = aes_key + aes_msg
+    print(f'circuit input: {bools_to_bins(circuit_input)}')
+    circuit_output = circuit.execute_circuit(circuit_input)
+    print(f'circuit output: {bools_to_bins(circuit_output)}\n')
+
+    # zero equal circuit
+    circuit_file = 'circuits/zero_equal.txt'
+    circuit = BristolCircuit(circuit_file, circuit_name='zero_equal')
+    circuit.load_circuit()
+    circuit.brief()
+    circuit.draw_circuit()
+    circuit.load_circuit_as_dag()
+    print(f'Is the circuit a directed acyclic graph (DAG) ? {circuit.is_directed_acyclic_graph()}')
