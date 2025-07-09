@@ -2,6 +2,13 @@ import logging
 logging.basicConfig(format='[%(levelname)s] [%(filename)s:%(lineno)d] %(message)s', level=logging.INFO)
 
 class BristolCircuit: 
+    GATE = {
+                "AND":{"fan_in":2, "func": lambda x:(x[0] and x[1])},
+                "OR":{"fan_in":2, "func": lambda x:(x[0] or x[1])},
+                "XOR":{"fan_in":2, "func": lambda x:(x[0] ^ x[1])},
+                "INV":{"fan_in":1, "func": lambda x:(not x[0])}
+            }
+    
     ''' refer to https://nigelsmart.github.io/MPC-Circuits/ '''
     def __init__(self, circuit_file:str, circuit_name:str=None):
         print(f'circuit_file = {circuit_file}')
@@ -26,7 +33,6 @@ class BristolCircuit:
             lines = f.readlines()
             self.n = eval(lines[0].split()[0])
             self.m = eval(lines[0].split()[1])
-            print(f'load_circuit = {self.m}')
             self.niv = eval(lines[1].split()[0])
             for i in range(self.niv):
                 self.niv_wires.append(eval(lines[1].split()[1+i]))
@@ -43,24 +49,12 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.split()
             gate_type = gate[-1]
-            if gate_type in self.one_fan_in_gate:
-                gi_node = gate[2] # gate input node
-                go_node = gate[3] # gate output node
-                edges.append((gi_node, go_node))
-            elif gate_type in self.two_fan_in_gate:
-                gi_0_node = gate[2]
-                gi_1_node = gate[3]
-                go_node = gate[4]
-                edges.append((gi_0_node, go_node))
-                edges.append((gi_1_node, go_node))
-            elif gate_type in self.three_fan_in_gate:
-                gi_0_node = gate[2]
-                gi_1_node = gate[3]
-                gi_2_node = gate[4]
-                go_node = gate[5]
-                edges.append((gi_0_node, go_node))
-                edges.append((gi_1_node, go_node))
-                edges.append((gi_2_node, go_node))
+            if gate_type in self.GATE:
+                ni = self.GATE[gate_type]["fan_in"] # number of fan-in wires
+                in_nodes = [eval(gate[2 + i]) for i in range(ni)]
+                out_node = eval(gate[2 + ni])
+                for in_node in in_nodes:
+                    edges.append((in_node, out_node))
             else:
                 error_msg = 'unexpected gate appears: ' + gate_type
                 logging.error(error_msg)
@@ -155,38 +149,13 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.split()
             gate_type = gate[-1]
-            if gate_type in self.one_fan_in_gate:
-                in_id = eval(gate[2]) # input wire id
-                out_id = eval(gate[3]) # output wire id
-                if gate_type == 'INV':
-                    wires[out_id] = not wires[in_id] # compute
-                else:
-                    error_msg = 'unexpected gate appears: ' + gate_type
-                    logging.error(error_msg)
-                    raise BaseException(error_msg)
-            elif gate_type in self.two_fan_in_gate:
-                in0_id = eval(gate[2]) # input wire id
-                in1_id = eval(gate[3]) # input wire id
-                out_id = eval(gate[4]) # output wire id
-                if gate_type == 'AND':
-                    wires[out_id] = wires[in0_id] and wires[in1_id] # compute
-                elif gate_type == 'XOR':
-                    wires[out_id] = wires[in0_id] ^ wires[in1_id] # compute
-                else:
-                    error_msg = 'unexpected gate appears: ' + gate_type
-                    logging.error(error_msg)
-                    raise BaseException(error_msg)
-            elif gate_type in self.three_fan_in_gate:
-                in0_id = eval(gate[2])
-                in1_id = eval(gate[3])
-                in2_id = eval(gate[4])
-                out_id = eval(gate[5])
-                if gate_type == 'MUX':
-                    wires[out_id] = wires[in1_id] if wires[in0_id] else wires[in2_id]
-                else:
-                    error_msg = 'unexpected gate appears: ' + gate_type
-                    logging.error(error_msg)
-                    raise BaseException(error_msg)
+            if gate_type in self.GATE:
+                ni = self.GATE[gate_type]["fan_in"] # number of fan-in wires
+                func = self.GATE[gate_type]["func"] # function of the gate
+                in_ids = [eval(gate[2 + i]) for i in range(ni)]
+                out_id = eval(gate[2 + ni])
+                in_wires = [wires[in_id] for in_id in in_ids]
+                wires[out_id] = func(in_wires)
             else:
                 error_msg = 'unexpected gate appears: ' + gate_type
                 logging.error(error_msg)
@@ -203,27 +172,18 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.split()
             gate_type = gate[-1]
-            if gate_type in self.one_fan_in_gate:
-                in_id = eval(gate[2]) # input wire id
-                out_id = eval(gate[3]) # output wire id
-                depths[out_id] = depths[in_id]
-                if specific_gate == None or specific_gate == gate_type:
-                    depths[out_id] += 1                 
-            elif gate_type in self.two_fan_in_gate:
-                in0_id = eval(gate[2]) # input wire id
-                in1_id = eval(gate[3]) # input wire id
-                out_id = eval(gate[4]) # output wire id
-                depths[out_id] = max(depths[in0_id], depths[in1_id])
+            if gate_type in self.GATE:
+                ni = self.GATE[gate_type]["fan_in"] # number of fan-in wires
+                in_ids = [eval(gate[2 + i]) for i in range(ni)]
+                out_id = eval(gate[2 + ni])
+                depths[out_id] = max([depths[in_id] for in_id in in_ids])
                 if specific_gate == None or specific_gate == gate_type:
                     depths[out_id] += 1
-            elif gate_type in self.three_fan_in_gate:
-                in0_id = eval(gate[2])
-                in1_id = eval(gate[3])
-                in2_id = eval(gate[4])
-                out_id = eval(gate[5])
-                depths[out_id] = max(depths[in0_id], depths[in1_id], depths[in2_id])
-                if specific_gate == None or specific_gate == gate_type:
-                    depths[out_id] += 1
+            else:
+                error_msg = 'unexpected gate appears: ' + gate_type
+                logging.error(error_msg)
+                raise BaseException(error_msg)
+                
         return max(depths)
     
     def draw_circuit(self, graph_file:str=None):
@@ -237,27 +197,13 @@ class BristolCircuit:
         for gate in self.circuit:
             gate = gate.strip().split()
             gate_type = gate[-1]
-            if gate_type in self.one_fan_in_gate:
-                gi_node = gate[2] # gate input node
-                go_node = gate[3] # gate output node
-                graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
-                graph += f'{gi_node}->{go_node} [label = "{gi_node}"]\n'
-            elif gate_type in self.two_fan_in_gate:
-                gi_0_node = gate[2]
-                gi_1_node = gate[3]
-                go_node = gate[4]
-                graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
-                graph += f'{gi_0_node}->{go_node} [label = "{gi_0_node}"]\n'
-                graph += f'{gi_1_node}->{go_node} [label = "{gi_1_node}"]\n'
-            elif gate_type in self.three_fan_in_gate:
-                gi_0_node = gate[2]
-                gi_1_node = gate[3]
-                gi_2_node = gate[4]
-                go_node = gate[5]
-                graph += f'{go_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
-                graph += f'{gi_0_node}->{go_node} [label = "{gi_0_node}"]\n'
-                graph += f'{gi_1_node}->{go_node} [label = "{gi_1_node}"]\n'
-                graph += f'{gi_2_node}->{go_node} [label = "{gi_2_node}"]\n'
+            if gate_type in self.GATE:
+                ni = self.GATE[gate_type]["fan_in"] # number of fan-in wires
+                in_nodes = [eval(gate[2 + i]) for i in range(ni)]
+                out_node = eval(gate[2 + ni])
+                graph += f'{out_node} [shape=polygon, sides=4, label="{gate_type}", color="black"]\n'
+                for in_node in in_nodes:
+                    graph += f'{in_node}->{out_node} [label = "{in_node}"]\n'
             else:
                 error_msg = 'unexpected gate appears: ' + gate_type
                 logging.error(error_msg)
