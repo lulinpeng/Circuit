@@ -36,7 +36,6 @@ class BristolCircuit:
             self.niv = eval(lines[1].split()[0])
             for i in range(self.niv):
                 self.niv_wires.append(eval(lines[1].split()[1+i]))
-                #self.m += self.niv_wires[i]
             self.nov = eval(lines[2].split()[0])
             for i in range(self.nov):
                 self.nov_wires.append(eval(lines[2].split()[1+i]))
